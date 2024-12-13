@@ -1,0 +1,176 @@
+ 
+ 
+import React, { useState } from 'react';
+
+const initialBoard = [
+  ['♜','♞','♝','♛','♚','♝','♞','♜'],
+  ['♟','♟','♟','♟','♟','♟','♟','♟'],
+  [null,null,null,null,null,null,null,null],
+  [null,null,null,null,null,null,null,null],
+  [null,null,null,null,null,null,null,null],
+  [null,null,null,null,null,null,null,null],
+  ['♙','♙','♙','♙','♙','♙','♙','♙'],
+  ['♖','♘','♗','♕','♔','♗','♘','♖']
+];
+
+const ChessGame = () => {
+  const [board, setBoard] = useState(initialBoard);
+  const [selectedPiece, setSelectedPiece] = useState(null);
+  const [currentPlayer, setCurrentPlayer] = useState('white');
+
+  const getPossibleMoves = (piece, row, col) => {
+    const moves = [];
+    const isWhite = ['♙','♖','♘','♗','♕','♔'].includes(piece);
+    const opponentPieces = isWhite ? ['♚','♛','♜','♝','♞','♟'] : ['♔','♕','♖','♗','♘','♙'];
+
+    switch(piece) {
+      case '♙': // Белая пешка
+        if (row > 0) {
+          if (!board[row-1][col]) moves.push([row-1, col]);
+          if (row === 6 && !board[row-1][col] && !board[row-2][col]) moves.push([row-2, col]);
+          // Взятие по диагонали
+          if (col > 0 && opponentPieces.includes(board[row-1][col-1])) moves.push([row-1, col-1]);
+          if (col < 7 && opponentPieces.includes(board[row-1][col+1])) moves.push([row-1, col+1]);
+        }
+        break;
+      case '♟': // Черная пешка
+        if (row < 7) {
+          if (!board[row+1][col]) moves.push([row+1, col]);
+          if (row === 1 && !board[row+1][col] && !board[row+2][col]) moves.push([row+2, col]);
+          // Взятие по диагонали
+          if (col > 0 && opponentPieces.includes(board[row+1][col-1])) moves.push([row+1, col-1]);
+          if (col < 7 && opponentPieces.includes(board[row+1][col+1])) moves.push([row+1, col+1]);
+        }
+        break;
+      case '♘': // Конь белый
+      case '♞': // Конь черный
+        [[1,2],[1,-2],[-1,2],[-1,-2],[2,1],[2,-1],[-2,1],[-2,-1]].forEach(([dx,dy]) => {
+          const newRow = row + dx, newCol = col + dy;
+          if (newRow >= 0 && newRow < 8 && newCol >= 0 && newCol < 8) {
+            if (!board[newRow][newCol] || opponentPieces.includes(board[newRow][newCol])) {
+              moves.push([newRow, newCol]);
+            }
+          }
+        });
+        break;
+      case '♗': // Слон белый
+      case '♝': // Слон черный
+        [[1,1],[1,-1],[-1,1],[-1,-1]].forEach(([dx,dy]) => {
+          for (let i = 1; i < 8; i++) {
+            const newRow = row + dx * i, newCol = col + dy * i;
+            if (newRow < 0 || newRow >= 8 || newCol < 0 || newCol >= 8) break;
+            if (board[newRow][newCol]) {
+              if (opponentPieces.includes(board[newRow][newCol])) moves.push([newRow, newCol]);
+              break;
+            }
+            moves.push([newRow, newCol]);
+          }
+        });
+        break;
+      case '♖': // Ладья белая
+      case '♜': // Ладья черная
+        [[1,0],[-1,0],[0,1],[0,-1]].forEach(([dx,dy]) => {
+          for (let i = 1; i < 8; i++) {
+            const newRow = row + dx * i, newCol = col + dy * i;
+            if (newRow < 0 || newRow >= 8 || newCol < 0 || newCol >= 8) break;
+            if (board[newRow][newCol]) {
+              if (opponentPieces.includes(board[newRow][newCol])) moves.push([newRow, newCol]);
+              break;
+            }
+            moves.push([newRow, newCol]);
+          }
+        });
+        break;
+      case '♕': // Ферзь белый
+      case '♛': // Ферзь черный
+        [[1,1],[1,-1],[-1,1],[-1,-1],[1,0],[-1,0],[0,1],[0,-1]].forEach(([dx,dy]) => {
+          for (let i = 1; i < 8; i++) {
+            const newRow = row + dx * i, newCol = col + dy * i;
+            if (newRow < 0 || newRow >= 8 || newCol < 0 || newCol >= 8) break;
+            if (board[newRow][newCol]) {
+              if (opponentPieces.includes(board[newRow][newCol])) moves.push([newRow, newCol]);
+              break;
+            }
+            moves.push([newRow, newCol]);
+          }
+        });
+        break;
+      case '♔': // Король белый
+      case '♚': // Король черный
+        [[1,1],[1,-1],[-1,1],[-1,-1],[1,0],[-1,0],[0,1],[0,-1]].forEach(([dx,dy]) => {
+          const newRow = row + dx, newCol = col + dy;
+          if (newRow >= 0 && newRow < 8 && newCol >= 0 && newCol < 8) {
+            if (!board[newRow][newCol] || opponentPieces.includes(board[newRow][newCol])) {
+              moves.push([newRow, newCol]);
+            }
+          }
+        });
+        break;
+    }
+    return moves;
+  };
+
+  const handleMove = (targetRow, targetCol) => {
+    if (!selectedPiece) return;
+
+    const possibleMoves = getPossibleMoves(
+      board[selectedPiece.row][selectedPiece.col], 
+      selectedPiece.row, 
+      selectedPiece.col
+    );
+
+    const isValidMove = possibleMoves.some(
+      move => move[0] === targetRow && move[1] === targetCol
+    );
+
+    if (isValidMove) {
+      const newBoard = board.map(row => [...row]);
+      newBoard[targetRow][targetCol] = board[selectedPiece.row][selectedPiece.col];
+      newBoard[selectedPiece.row][selectedPiece.col] = null;
+      
+      setBoard(newBoard);
+      setCurrentPlayer(currentPlayer === 'white' ? 'black' : 'white');
+      setSelectedPiece(null);
+    }
+  };
+
+  const selectPiece = (row, col) => {
+    const piece = board[row][col];
+    const isWhitePiece = ['♙','♖','♘','♗','♕','♔'].includes(piece);
+    const isBlackPiece = ['♟','♜','♞','♝','♛','♚'].includes(piece);
+
+    if ((currentPlayer === 'white' && isWhitePiece) || 
+        (currentPlayer === 'black' && isBlackPiece)) {
+      setSelectedPiece({ row, col });
+    }
+  };
+
+  return (
+    <div className="flex flex-col items-center bg-gray-100 p-8 min-h-screen">
+      <h1 className="text-4xl font-bold mb-6">Шахмат</h1>
+      <div className="text-2xl mb-4">
+        Қазіргі ойыншы: {currentPlayer === 'white' ? 'Ақ' : 'Қара'}
+      </div>
+      <div className="grid grid-cols-8 border-4 border-gray-600">
+        {board.map((row, rowIndex) => (
+          row.map((piece, colIndex) => (
+            <div 
+              key={`${rowIndex}-${colIndex}`}
+              onClick={() => piece ? selectPiece(rowIndex, colIndex) : handleMove(rowIndex, colIndex)}
+              className={`
+                w-20 h-20 flex items-center justify-center text-4xl cursor-pointer
+                ${(rowIndex + colIndex) % 2 === 0 ? 'bg-[#f0d9b5]' : 'bg-[#b58863]'}
+                ${selectedPiece && selectedPiece.row === rowIndex && selectedPiece.col === colIndex 
+                  ? 'ring-4 ring-green-500' : ''}
+              `}
+            >
+              {piece}
+            </div>
+          ))
+        ))}
+      </div>
+    </div>
+  );
+};
+
+export default ChessGame;
